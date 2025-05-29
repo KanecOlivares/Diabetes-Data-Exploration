@@ -1,0 +1,14 @@
+pandas
+numpy
+matplotlib
+otter-grader
+scikit-learn
+pandoc
+simplejson
+nltk
+jupyter_client
+ipykernel
+pypdf
+pytest
+jupyterlab
+scipy
