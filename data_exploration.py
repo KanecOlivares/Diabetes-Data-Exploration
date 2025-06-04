@@ -9,6 +9,7 @@ from sklearn.preprocessing import StandardScaler
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import StandardScaler
 from typing import Tuple
 
 import warnings
