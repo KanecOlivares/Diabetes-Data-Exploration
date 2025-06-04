@@ -107,6 +107,14 @@ def weight_exploration(data) -> None:
     plot_weight_bar(weight_range)
     return
 
+def standardize_data(data: pd.DataFrame) -> pd.DataFrame:
+    """
+    Standardizes the data using StandardScaler from sklearn
+    """
+    scaler = StandardScaler()
+    scaled_data = scaler.fit_transform(data)
+    return pd.DataFrame(scaled_data, columns=data.columns, index=data.index)
+
 
 
 def main():
