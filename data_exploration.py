@@ -109,12 +109,39 @@ def weight_exploration(data) -> None:
 
 def standardize_data(data: pd.DataFrame) -> pd.DataFrame:
     """
-    Standardizes the data using StandardScaler from sklearn
+    Standardizes the data using StandardScaler from sklearn. Assumes that the input DataFrame contains numeric features.
     """
     scaler = StandardScaler()
     scaled_data = scaler.fit_transform(data)
     return pd.DataFrame(scaled_data, columns=data.columns, index=data.index)
 
+def get_numeric_features(data: pd.DataFrame) -> pd.DataFrame:
+    """
+    Returns a DataFrame with only numeric features from the input DataFrame.
+    """
+    numeric_features = data.select_dtypes(include='number')
+    return numeric_features
+
+def plot_correlation_matrix(data: pd.DataFrame) -> None:
+    """
+    Plots the correlation matrix of the input DataFrame. Assumes that the DataFrame contains numeric features.
+    """
+    corr = data.corr()
+    fig, ax = plt.subplots(figsize=(10, 8))
+    fig.colorbar(ax.matshow(corr, cmap='coolwarm'))
+    
+    ticks = np.arange(len(corr.columns))
+    ax.set_xticks(ticks)
+    ax.set_yticks(ticks)
+
+    ax.set_xticklabels(corr.columns, rotation=90)
+    ax.set_yticklabels(corr.columns)
+
+    for (i, j), val in np.ndenumerate(corr.values):
+        ax.text(j, i, f"{val:.2f}", ha='center', va='center', color='black')
+    
+    plt.title('Correlation Matrix Heatmap')
+    plt.show()
 
 
 def main():
