@@ -97,8 +97,10 @@ def compute_range_instances(weight_column) -> dict:
 def plot_weight_bar(weight_range) -> None:
     key_list = list(weight_range.keys())
     value_list = list(weight_range.values())
+    plt.figure(figsize=(10, 6))
     plt.bar(key_list, value_list)
-    plt.show()
+    plt.savefig("weight_plot.png")
+    plt.close()
     return
 
 def weight_exploration(data) -> None:
@@ -149,6 +151,10 @@ def main():
     np.random.seed(seed)
     data, X, y_A1C, y_readmitted, y_med_spec, y_change = setup()
     weight_exploration(data)
+
+    print("Moving on plot correlation")
+    # plot_correlation_matrix(data)
+
 
 main()
     
