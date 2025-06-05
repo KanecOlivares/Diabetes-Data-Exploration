@@ -12,6 +12,12 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 from typing import Tuple
 
+import seaborn as sns
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -61,7 +67,7 @@ def check_valid_keys(data, features_to_drop):
 def setup():
 
     data = pd.read_csv('data/diabetic_data.csv')
-    features_to_drop = ['weight', 'encounter_id', 'patient_nbr']
+    features_to_drop = ['weight', 'encounter_id', 'patient_nbr', ]
     # check_valid_keys(data, features_to_drop) # Use for debugging
     X = data.drop(features_to_drop, axis=1)
     y_A1C = data['A1Cresult']
@@ -129,7 +135,7 @@ def plot_correlation_matrix(data: pd.DataFrame) -> None:
     Plots the correlation matrix of the input DataFrame. Assumes that the DataFrame contains numeric features.
     """
     corr = data.corr()
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(13, 8)) # width
     fig.colorbar(ax.matshow(corr, cmap='coolwarm'))
     
     ticks = np.arange(len(corr.columns))
@@ -143,7 +149,83 @@ def plot_correlation_matrix(data: pd.DataFrame) -> None:
         ax.text(j, i, f"{val:.2f}", ha='center', va='center', color='black')
     
     plt.title('Correlation Matrix Heatmap')
-    plt.show()
+    plt.savefig("correlation_matrix_heatmap.png")
+    plt.close()
+
+def neural_network(data, y_target):
+    # Dropping readmitted b/c we are predicting this
+    X = data.drop('readmitted', axis=1) 
+    
+    return -1
+    
+def plot_readmission_time_in_hospital(data: pd.DataFrame) -> None:
+    crosstab = pd.crosstab(data['discharge_disposition_id'], data['readmitted'])
+
+    # Optional: sort by disposition id
+    crosstab = crosstab.sort_index()
+
+    # Plot stacked bar chart
+    crosstab.plot(kind='bar', stacked=True, figsize=(10,7), colormap='tab20')
+
+
+    plt.title('Readmission Counts per Discharge Disposition ID')
+    plt.xlabel('Discharge Disposition ID')
+    plt.ylabel('Number of Patients')
+    plt.legend(title='Readmission Status')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig("discharge_dispo_readmission_counts.png")
+    plt.close()
+
+    GREEN = '\033[32m'
+    RESET = '\033[0m' # Resets all formatting
+    for feature in data.columns:
+        if feature == 'readmitted':
+            continue  # skip target column
+        counts = pd.crosstab(data[feature], data['readmitted'])
+        percentages = counts.div(counts.sum(axis=1), axis=0) * 100
+        sorted_percentages = percentages.sort_values(by='NO', ascending=True)
+        pd.set_option('display.float_format', lambda x: f'{x:5.2f}%')  # format as %
+        print(GREEN + f"\nReadmission Percentages per {feature}:\n" + RESET)
+        print(sorted_percentages)
+        
+
+    """
+    Readmission Percentages per Discharge Disposition ID:
+
+readmitted                  <30    >30      NO
+discharge_disposition_id                      
+1                         9.30% 35.72%  54.98%
+2                        16.07% 31.39%  52.54%
+3                        14.66% 35.23%  50.11%
+4                        12.76% 34.11%  53.13%
+5                        20.86% 29.56%  49.58%
+6                        12.70% 41.56%  45.74%
+7                        14.45% 35.47%  50.08%
+8                        13.89% 35.19%  50.93%
+9                        42.86%  9.52%  47.62%
+10                        0.00% 66.67%  33.33%
+11                        0.00%  0.00% 100.00%
+12                       66.67%  0.00%  33.33%
+13                        4.76%  9.02%  86.22%
+14                        6.45%  1.88%  91.67%
+15                       44.44% 28.57%  26.98%
+16                        0.00% 54.55%  45.45%
+17                        0.00% 35.71%  64.29%
+18                       12.44% 27.82%  59.74%
+19                        0.00%  0.00% 100.00%
+20                        0.00%  0.00% 100.00%
+22                       27.70% 26.04%  46.26%
+23                        7.28% 34.95%  57.77%
+24                       14.58% 33.33%  52.08%
+25                        9.30% 38.02%  52.68%
+27                        0.00% 20.00%  80.00%
+28                       36.69% 24.46%  38.85%
+
+
+    """
+
+
 
 
 def main():
@@ -153,7 +235,11 @@ def main():
     weight_exploration(data)
 
     print("Moving on plot correlation")
-    # plot_correlation_matrix(data)
+    numerical_standard_data = get_numeric_features(data)
+    plot_correlation_matrix(numerical_standard_data)
+    plot_readmission_time_in_hospital(data)
+    # neural_network(data, y_readmitted)
+
 
 
 main()
