@@ -149,6 +149,8 @@ def main():
     np.random.seed(seed)
     data, X, y_A1C, y_readmitted, y_med_spec, y_change = setup()
     weight_exploration(data)
+    
+    plot_correlation_matrix(data)
 
 main()
     
