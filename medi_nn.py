@@ -15,13 +15,35 @@ GREEN = '\033[92m'
 BLUE = '\033[94m'
 RESET = '\033[0m'
 
-def save_fig(plt, directory: str, filename):
-    os.makedirs(directory, exist_ok=True)
+def save_fig(plt, directory: str, filename) -> None:
+    """
+    Saves a given plt in to the machine's directory and filename. If directory 
+    does not exist it will double check if the directory should be made then make 
+    or not make it 
+
+    Arguments:
+    plt: plot object to plot and close
+    """
+    if not os.path.isdir(directory):
+        message = f'{RED} {directory} does not exist in current path: {os.getcwd()}{RESET}.\n'
+        message += f"Would you like to create {BLUE} {directory} {RESET}: Y/N: "
+        if input(message).lower() == 'y':
+            print(f'{GREEN}Made {directory}/{filename}{RESET}')
+            os.makedirs(directory, exist_ok=True)
+        else:
+            print(f'{RED}Did not make directory exiting...{RESET}')
+            return
+            
     plt.savefig(f"{directory}/{filename}")
     plt.close()
 
 class MediNN():
     def __init__(self, data, target):
+        """
+        Setups up model, training, validation, testing data. 
+        data: the db
+        target: column we are predicting 
+        """
         self.seed = 1234
         self.data = data
         self.target = target
@@ -34,6 +56,9 @@ class MediNN():
         self.transform_and_scale()
 
     def model_creation(self):
+        """
+        Creates the model and returns it. Mess with the actual hyperparms here
+        """
         return MLPClassifier(hidden_layer_sizes= (10, 2),
         activation = "relu",
         solver = "sgd",
@@ -48,6 +73,10 @@ class MediNN():
         verbose=True)
     
     def compute_X(self):
+        """
+        In this case we are dropping readmitted as it is the target. The other features
+        were too noisy i.e too many unique values or had little to no information. 
+        """
         X = self.data.drop('readmitted', axis=1)
         features_to_drop = ["patient_nbr", "discharge_disposition_id", "admission_source_id", 
                             "payer_code", "medical_specialty"]
@@ -55,11 +84,18 @@ class MediNN():
         return X
 
     def get_split(self, split_percentage, X, y_target):
+        """
+        Gives split of one_pair and second pair. X and Y. First pair is the (1 - split_percentage)
+        Other is the split_percentage. i.e Testing/Validation
+        """
         return train_test_split(
             X, y_target, test_size=split_percentage, random_state=self.seed, stratify=y_target
         )
     
     def transform_and_scale(self) -> None:
+        """
+        Transforms and scales the input and output 
+        """
         scaler = StandardScaler().fit(self.X_train)  # Learn mean and std from training set
         self.X_train = scaler.transform(self.X_train)
         self.X_val = scaler.transform(self.X_val)
@@ -72,14 +108,6 @@ class MediNN():
     def train(self) -> None:
         self.model.fit(self.X_train, self.y_train)
 
-    def plot_loss_curve(self) -> None:
-        plt.plot(self.model.loss_curve_)
-        plt.title("Loss per Iteration")
-        plt.xlabel("Iteration")
-        plt.ylabel("Loss")
-        plt.grid(True)
-        save_fig(plt, "nn_figs", "neural_network_loss_curve.png")
-
     def print_evals(self) -> None:
         self.print_scores(self.model, self.X_train, self.y_train, "Training")
         self.print_scores(self.model, self.X_val, self.y_val, "Validation")
@@ -91,6 +119,14 @@ class MediNN():
 
         # Saves locally a grpah of the loss curve
         self.plot_loss_curve()
+
+    def plot_loss_curve(self) -> None:
+        plt.plot(self.model.loss_curve_)
+        plt.title("Loss per Iteration")
+        plt.xlabel("Iteration")
+        plt.ylabel("Loss")
+        plt.grid(True)
+        save_fig(plt, "nn_figs", "neural_network_loss_curve.png")
 
     def print_scores(self, model, x, y, score_type: str = "NOT GIVEN"):
         y_pred = model.predict(x)

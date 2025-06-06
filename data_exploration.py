@@ -241,56 +241,11 @@ def plot_readmission_time_in_hospital(data: pd.DataFrame) -> None:
         28                       36.69% 24.46%  38.85%
     """
 
-def evaluate(model, dataloader, criterion, device='cpu'):
-    model.eval()  # eval mode
-    total_loss = 0.0
-    correct = 0
-    total = 0
-    
-    with torch.no_grad():
-        for inputs, labels in dataloader:
-            inputs, labels = inputs.to(device), labels.to(device)
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            total_loss += loss.item() * inputs.size(0)  # sum loss
-            
-            # Get predicted classes
-            _, preds = torch.max(outputs, 1)
-            correct += (preds == labels).sum().item()
-            total += labels.size(0)
-    
-    avg_loss = total_loss / total
-    accuracy = correct / total
-    return avg_loss, accuracy
-
-def create_dataloader(X, y, batch_size=64, shuffle=False):
-    X_tensor = torch.tensor(X.values, dtype=torch.float32)
-    y_tensor = torch.tensor(y.values, dtype=torch.long)
-    dataset = TensorDataset(X_tensor, y_tensor)
-    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
-
-def plot_loss_curve(model):
-    plt.plot(model.loss_curve_)
-    plt.title("Loss per Iteration")
-    plt.xlabel("Iteration")
-    plt.ylabel("Loss")
-    plt.grid(True)
-    plt.savefig("neural_network_loss_curve.png")
-    plt.close()
-
-def print_evals(model, X_train, X_val, X_test, y_train, y_val, y_test):
-
-    print_scores(model, X_train, y_train, "Training")
-    print_scores(model, X_val, y_val, "Validation")
-    print_scores(model, X_test, y_test, "Testing")
-
-    # Printing Distrubutions
-    print("Train classes:", np.bincount(y_train))
-    print("Val classes:", np.bincount(y_val))
-
-    #
-    plot_loss_curve(model)
-
+def train_and_evaluate(data, target, which_model:str):
+    if which_model == "nn":
+        medi_nn = MediNN(data, target)
+        medi_nn.train()
+        medi_nn.print_evals()
 
 def main():
     seed = 1234
@@ -303,71 +258,6 @@ def main():
     # plot_correlation_matrix(numerical_standard_data)
     # plot_readmission_time_in_hospital(data)
 
-
-    medi_nn = MediNN(data, y_readmitted)
-    medi_nn.train()
-    medi_nn.print_evals()
-
-
-# CHECK THE PLOTSSSS FOR REGRESSION
-# DO NEURAL NETWORKS
-
-def print_scores(model, x, y, score_type: str = "NOT GIVEN"):
-    y_pred = model.predict(x)
-    accuracy = accuracy_score(y, y_pred)
-    print(f"{GREEN}{score_type} Accuracy: {accuracy:.4f}{RESET}")
-
-def nn_num_med():
-    seed = 1234
-    np.random.seed(seed)
-    data, _, y_A1C, y_readmitted, y_med_spec, y_change = setup()
-
-    # Dropping because this is the target
-    X = data.drop('readmitted', axis=1)
-
-    # Dropping additional features not dropped in setup due to fine tuning this model
-    features_to_drop = ["patient_nbr", "discharge_disposition_id", "admission_source_id", "payer_code", "medical_specialty"]
-    X = data.drop(features_to_drop, axis=1)
-
-    # Setting up training split 70% training 30% for Test/Val
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y_readmitted, test_size=0.3, random_state=seed, stratify=y_readmitted
-    )
-    # 15% Test 15% Validation
-    X_val, X_test, y_val, y_test = train_test_split(
-    X_val, y_val, test_size=0.5, random_state=seed, stratify=y_val)
-
-    mlp = MLPClassifier(hidden_layer_sizes= (10, 2),
-        activation = "relu",
-        solver = "sgd",
-        alpha = 0.1,
-        batch_size=32,
-        learning_rate = 'adaptive',
-        learning_rate_init = 0.0001,
-        early_stopping=True,
-        validation_fraction=0.25,
-        max_iter = 100,
-        n_iter_no_change = 20,
-        verbose=True)
-    
-    scaler = StandardScaler().fit(X_train)  # Learn mean and std from training set
-    X_train = scaler.transform(X_train)
-    X_val = scaler.transform(X_val)
-    X_test = scaler.transform(X_test)
-
-    y_train.value_counts(normalize=True)
-    y_val.value_counts(normalize=True)
-    y_test.value_counts(normalize=True)
-
-    mlp.fit(X_train, y_train)
-
-    print_evals(mlp, X_train, X_val, X_test, y_train, y_val, y_test)
-
-
+    train_and_evaluate(data, y_readmitted, "nn")
 
 main()
-
-# nn_num_med()
-    
-
-    
