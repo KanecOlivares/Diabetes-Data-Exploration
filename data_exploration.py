@@ -349,10 +349,15 @@ def create_dataloader(X, y, batch_size=64, shuffle=False):
     dataset = TensorDataset(X_tensor, y_tensor)
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 
-def print_evals(model, dataloader, criterion, loader_type: str = "dataloader not specified"):
-    print(f'{GREEN} {loader_type} info {RESET}')
-    val_loss, val_acc = evaluate(model, dataloader, criterion)
-    print(f"{loader_type} Loss: {val_loss:.4f}, {loader_type} Accuracy: {val_acc:.4f}")
+def print_evals(model, X_train, X_val, X_test, y_train, y_val, y_test):
+
+    print_scores(model, X_train, y_train, "Training")
+    print_scores(model, X_val, y_val, "Validation")
+    print_scores(model, X_test, y_test, "Testing")
+
+    # Printing Distrubutions
+    print("Train classes:", np.bincount(y_train))
+    print("Val classes:", np.bincount(y_val))
 
 
 def main():
@@ -466,59 +471,63 @@ def main():
 # CHECK THE PLOTSSSS FOR REGRESSION
 # DO NEURAL NETWORKS
 
+def print_scores(model, x, y, score_type: str = "NOT GIVEN"):
+    y_pred = model.predict(x)
+    accuracy = accuracy_score(y, y_pred)
+    print(f"{GREEN}{score_type} Accuracy: {accuracy:.4f}{RESET}")
+
 def nn_num_med():
     seed = 1234
     np.random.seed(seed)
-    data, _, y_A1C, y_readmitted, y_med_spec, y_change, y_num_med = setup()
-    X = data.drop('num_medications', axis=1)
-    class_counts = y_num_med.value_counts()
+    data, _, y_A1C, y_readmitted, y_med_spec, y_change = setup()
 
-    valid_classes = class_counts[class_counts >= 5].index
-    X = X[y_num_med.isin(valid_classes)]
-    y_num_med = y_num_med[y_num_med.isin(valid_classes)]
+    # Dropping because this is the target
+    X = data.drop('readmitted', axis=1)
 
-    X_train, X_temp, y_train, y_temp = train_test_split(
-        X, y_num_med, test_size=0.40, random_state=seed, stratify=y_num_med
+    # Dropping additional features not dropped in setup due to fine tuning this model
+    features_to_drop = ["patient_nbr", "discharge_disposition_id", "admission_source_id", "payer_code", "medical_specialty"]
+    X = data.drop(features_to_drop, axis=1)
+
+    # Setting up training split 70% training 30% for Test/Val
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y_readmitted, test_size=0.3, random_state=seed, stratify=y_readmitted
     )
-    
+    # 15% Test 15% Validation
     X_val, X_test, y_val, y_test = train_test_split(
-        X_temp, y_temp, test_size=0.50, random_state=seed, stratify=y_temp
-    )
+    X_val, y_val, test_size=0.5, random_state=seed, stratify=y_val)
 
-    mlp = MLPClassifier(hidden_layer_sizes= (64, 32),
+    mlp = MLPClassifier(hidden_layer_sizes= (10, 2),
         activation = "relu",
-        solver = "adam",
-        alpha = 0.001,
-        batch_size=16,
+        solver = "sgd",
+        alpha = 0.1,
+        batch_size=32,
         learning_rate = 'adaptive',
-        learning_rate_init = 0.001,
+        learning_rate_init = 0.0001,
         early_stopping=True,
-        validation_fraction=0.2,
-        max_iter = 650,
+        validation_fraction=0.25,
+        max_iter = 100,
         n_iter_no_change = 20,
         verbose=True)
     
+    scaler = StandardScaler().fit(X_train)  # Learn mean and std from training set
 
+    X_train = scaler.transform(X_train)
+    X_val = scaler.transform(X_val)
+    X_test = scaler.transform(X_test)
+
+    y_train.value_counts(normalize=True)
+    y_val.value_counts(normalize=True)
+    y_test.value_counts(normalize=True)
 
     mlp.fit(X_train, y_train)
 
-
-    y_pred = mlp.predict(X_train)
-    accuracy = accuracy_score(y_train, y_pred)
-    print(f"{GREEN}Train Accuracy: {accuracy:.4f}{RESET}")
-
-    y_pred = mlp.predict(X_val)
-    accuracy = accuracy_score(y_test, y_pred)
-    print(f"{GREEN} Val Accuracy: {accuracy:.4f}{RESET}")
-
-    y_pred = mlp.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
-    print(f"{GREEN}Test Accuracy: {accuracy:.4f}{RESET}")
+    print_evals(mlp, X_train, X_val, X_test, y_train, y_val, y_test)
 
 
-main()
 
-# nn_num_med()
+# main()
+
+nn_num_med()
     
 
     
