@@ -22,6 +22,7 @@ import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
 
 from medi_nn import MediNN
+from medi_knn import MediKNN
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -80,6 +81,7 @@ def setup():
     # Either too little info, or they have too many unique keys reduction of noise
     features_to_drop = ['weight', 'encounter_id', 'patient_nbr', 'readmitted', 'payer_code', 'medical_specialty', 
                         'diag_1', 'diag_2', 'diag_3', 'examide', 'citoglipton']
+
     
     X = data.drop(features_to_drop, axis=1)
     data['readmitted'] = data['readmitted'].map({
@@ -246,6 +248,25 @@ def train_and_evaluate(data, target, which_model:str):
         medi_nn = MediNN(data, target)
         medi_nn.train()
         medi_nn.print_evals()
+    elif which_model == "knn":
+        k_vals = [1, 3, 5, 7, 9, 11, 13, 15]
+        train_errors = []
+        val_errors = []
+        test_errors = []
+
+        for k in k_vals:
+            print(f"Training KNN with k={k}")
+            medi_knn = MediKNN(data, target, k)
+            medi_knn.train()
+            error = medi_knn.return_evals()
+            train_errors.append(error[0])
+            val_errors.append(error[1])
+            test_errors.append(error[2])
+
+        medi_knn.plot_loss_curve(k_vals, train_errors, val_errors, test_errors)
+
+
+
 
 def main():
     seed = 1234
@@ -258,6 +279,6 @@ def main():
     # plot_correlation_matrix(numerical_standard_data)
     # plot_readmission_time_in_hospital(data)
 
-    train_and_evaluate(data, y_readmitted, "nn")
+    train_and_evaluate(data, y_readmitted, "knn")
 
 main()
