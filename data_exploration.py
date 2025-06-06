@@ -21,6 +21,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
 
+from medi_nn import MediNN
+
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -296,10 +298,15 @@ def main():
     data, _, y_A1C, y_readmitted, y_med_spec, y_change = setup()
 
     # uncomment these!!!
-    weight_exploration(data)
-    numerical_standard_data = get_numeric_features(data)
-    plot_correlation_matrix(numerical_standard_data)
-    plot_readmission_time_in_hospital(data)
+    # weight_exploration(data)
+    # numerical_standard_data = get_numeric_features(data)
+    # plot_correlation_matrix(numerical_standard_data)
+    # plot_readmission_time_in_hospital(data)
+
+
+    medi_nn = MediNN(data, y_readmitted)
+    medi_nn.train()
+    medi_nn.print_evals()
 
 
 # CHECK THE PLOTSSSS FOR REGRESSION
@@ -351,16 +358,16 @@ def nn_num_med():
     y_train.value_counts(normalize=True)
     y_val.value_counts(normalize=True)
     y_test.value_counts(normalize=True)
-    
+
     mlp.fit(X_train, y_train)
 
     print_evals(mlp, X_train, X_val, X_test, y_train, y_val, y_test)
 
 
 
-# main()
+main()
 
-nn_num_med()
+# nn_num_med()
     
 
     
