@@ -11,6 +11,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import StandardScaler
 from typing import Tuple
 
@@ -74,7 +75,8 @@ def check_valid_keys(data, features_to_drop):
 def setup():
 
     data = pd.read_csv('data/diabetic_data.csv')
-    features_to_drop = ['weight', 'encounter_id', 'patient_nbr', 'readmitted']
+    features_to_drop = ['weight', 'encounter_id', 'patient_nbr', 'readmitted', 'payer_code', 'medical_specialty', 
+                        'diag_1', 'diag_2', 'diag_3', 'examide', 'citoglipton']
     X = data.drop(features_to_drop, axis=1)
     # check_valid_keys(data, features_to_drop) # Use for debugging
     data['readmitted'] = data['readmitted'].map({
@@ -118,6 +120,7 @@ def setup():
     y_readmitted = data['readmitted']
     y_med_spec = data['medical_specialty']
     y_change = data['change']
+    data = standardize_data(data)
     return data, X, y_A1C, y_readmitted, y_med_spec, y_change
 
 
@@ -360,11 +363,10 @@ def main():
     # numerical_standard_data = get_numeric_features(data)
     # plot_correlation_matrix(numerical_standard_data)
     # plot_readmission_time_in_hospital(data)
-
     X = data.drop('readmitted', axis=1)
     print(f'Before numerical only {X.shape}')
     non_numeric_cols = data.select_dtypes(exclude=['number']).columns
-    print(data['medical_specialty'].unique())
+    # print(data['medical_specialty'].unique())
     print("Non-numeric columns:")
     print(non_numeric_cols)
     """
@@ -378,7 +380,7 @@ def main():
        'glimepiride-pioglitazone', 'metformin-rosiglitazone',
        'metformin-pioglitazone', 'change', 'diabetesMed'],
     """
-    X = get_numeric_features(X)
+    # X = get_numeric_features(X)
     print(f'After numerical only {X.shape}')
 
     X_train, X_val, y_train, y_val = train_test_split(
@@ -392,14 +394,41 @@ def main():
     val_loader   = create_dataloader(X_val, y_val)
     test_loader  = create_dataloader(X_test, y_test)
 
-    trained_model, dataloader, criterion = neural_network(X_train, y_train)
+    # trained_model, dataloader, criterion = neural_network(X_train, y_train)
 
-    # Training
-    print_evals(trained_model, train_loader, criterion, "Training")
-    # Validation
-    print_evals(trained_model, val_loader, criterion, "Validation")
-    # Testing
-    print_evals(trained_model, test_loader, criterion, "Testing")
+    mlp = MLPClassifier(hidden_layer_sizes= (64, 32),
+        activation = "relu",
+        solver = "sgd",
+        alpha = 0.1,
+        batch_size=64,
+        learning_rate = 'adaptive',
+        learning_rate_init = 0.001,
+        early_stopping=True,
+        validation_fraction=0.2,
+        max_iter = 450,
+        n_iter_no_change = 250,)
+    
+    mlp.fit(X_train, y_train)
+
+
+    y_pred = mlp.predict(X_train)
+    accuracy = accuracy_score(y_train, y_pred)
+    print(f"{GREEN}Train Accuracy: {accuracy:.4f}{RESET}")
+
+    y_pred = mlp.predict(X_val)
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f"{GREEN} Val Accuracy: {accuracy:.4f}{RESET}")
+
+    y_pred = mlp.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f"{GREEN}Test Accuracy: {accuracy:.4f}{RESET}")
+
+    # # Training
+    # print_evals(trained_model, train_loader, criterion, "Training")
+    # # Validation
+    # print_evals(trained_model, val_loader, criterion, "Validation")
+    # # Testing
+    # print_evals(trained_model, test_loader, criterion, "Testing")
 
 
 
