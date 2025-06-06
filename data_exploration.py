@@ -9,17 +9,24 @@ from sklearn.preprocessing import StandardScaler
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import StandardScaler
 from typing import Tuple
 
 import seaborn as sns
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import TensorDataset, DataLoader
 
 import warnings
 warnings.filterwarnings('ignore')
+
+RED = '\033[91m'
+GREEN = '\033[92m'
+BLUE = '\033[94m'
+RESET = '\033[0m'
 
 # 75 and 25 training vs testing
 # Randomeness / Reproduable shouldnt matter too much
@@ -67,9 +74,46 @@ def check_valid_keys(data, features_to_drop):
 def setup():
 
     data = pd.read_csv('data/diabetic_data.csv')
-    features_to_drop = ['weight', 'encounter_id', 'patient_nbr', ]
-    # check_valid_keys(data, features_to_drop) # Use for debugging
+    features_to_drop = ['weight', 'encounter_id', 'patient_nbr', 'readmitted']
     X = data.drop(features_to_drop, axis=1)
+    # check_valid_keys(data, features_to_drop) # Use for debugging
+    data['readmitted'] = data['readmitted'].map({
+    'NO': 0,
+    '>30': 1,
+    '<30': 2
+    })
+
+    data['race'] = data['race'].map({
+        'AfricanAmerican': 0,
+        'Asian': 1,
+        'Caucasian': 2,
+        'Hispanic': 3,
+        'Other': 4,
+        '?': 4
+    })
+
+
+
+    data['gender'] = data['gender'].map({
+        'Female': 0,
+        'Male': 1,
+        "Unknown/Invalid": 2
+    })
+
+    data['age'] = data['age'].map({
+        '[0-10)': 0,
+        '[10-20)': 1,
+        '[20-30)': 2,
+        '[30-40)': 3,
+        '[40-50)': 4,
+        '[50-60)': 5,
+        '[60-70)': 6,
+        '[70-80)': 7,
+        '[80-90)': 8,
+        '[90-100)': 9,
+    })
+    for col in data.select_dtypes(include=['object']).columns:
+        data[col] = data[col].astype('category').cat.codes
     y_A1C = data['A1Cresult']
     y_readmitted = data['readmitted']
     y_med_spec = data['medical_specialty']
@@ -152,11 +196,56 @@ def plot_correlation_matrix(data: pd.DataFrame) -> None:
     plt.savefig("correlation_matrix_heatmap.png")
     plt.close()
 
-def neural_network(data, y_target):
+def neural_network(X, y_target):
     # Dropping readmitted b/c we are predicting this
-    X = data.drop('readmitted', axis=1) 
-    
-    return -1
+    # X = data.drop('readmitted', axis=1)
+    # X = get_numeric_features(X)
+    # print(X.shape) # (101766, 49)
+    X_tensor = torch.tensor(X.values, dtype=torch.float32)
+    y_tensor = torch.tensor(y_target.values, dtype=torch.long)
+
+    dataset = TensorDataset(X_tensor, y_tensor)
+    dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
+    class SimpleNN(nn.Module):
+        def __init__(self):
+            super(SimpleNN, self).__init__()
+            self.fc1 = nn.Linear(X.shape[1], 64)
+            self.relu = nn.ReLU()
+            self.fc2 = nn.Linear(64, 32)  # example: binary classification
+            self.fc3 = nn.Linear(32, 24)
+            self.fc4 = nn.Linear(24, 3)
+
+        def forward(self, x):
+            out = self.fc1(x)
+            out = self.relu(out)
+
+            out = self.fc2(out)
+            out = self.relu(out)
+
+            out = self.fc3(out)
+            out = self.relu(out)
+
+            out = self.fc4(out)
+            return out
+
+    model = SimpleNN()
+
+    # Loss and optimizer
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.0005)
+
+    # Training loop
+    num_epochs = 50
+    for epoch in range(num_epochs):
+        for x_batch, y_batch in dataloader:
+            optimizer.zero_grad()
+            outputs = model(x_batch)
+            loss = criterion(outputs, y_batch)
+            loss.backward()
+            optimizer.step()
+        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
+
+    return model, dataloader, criterion
     
 def plot_readmission_time_in_hospital(data: pd.DataFrame) -> None:
     crosstab = pd.crosstab(data['discharge_disposition_id'], data['readmitted'])
@@ -225,21 +314,96 @@ discharge_disposition_id
 
     """
 
+def evaluate(model, dataloader, criterion, device='cpu'):
+    model.eval()  # eval mode
+    total_loss = 0.0
+    correct = 0
+    total = 0
+    
+    with torch.no_grad():
+        for inputs, labels in dataloader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            total_loss += loss.item() * inputs.size(0)  # sum loss
+            
+            # Get predicted classes
+            _, preds = torch.max(outputs, 1)
+            correct += (preds == labels).sum().item()
+            total += labels.size(0)
+    
+    avg_loss = total_loss / total
+    accuracy = correct / total
+    return avg_loss, accuracy
 
+def create_dataloader(X, y, batch_size=64, shuffle=False):
+    X_tensor = torch.tensor(X.values, dtype=torch.float32)
+    y_tensor = torch.tensor(y.values, dtype=torch.long)
+    dataset = TensorDataset(X_tensor, y_tensor)
+    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+def print_evals(model, dataloader, criterion, loader_type: str = "dataloader not specified"):
+    print(f'{GREEN} {loader_type} info {RESET}')
+    val_loss, val_acc = evaluate(model, dataloader, criterion)
+    print(f"{loader_type} Loss: {val_loss:.4f}, {loader_type} Accuracy: {val_acc:.4f}")
 
 
 def main():
     seed = 1234
     np.random.seed(seed)
     data, X, y_A1C, y_readmitted, y_med_spec, y_change = setup()
-    weight_exploration(data)
 
-    print("Moving on plot correlation")
-    numerical_standard_data = get_numeric_features(data)
-    plot_correlation_matrix(numerical_standard_data)
-    plot_readmission_time_in_hospital(data)
-    # neural_network(data, y_readmitted)
+    # uncomment these!!!
+    # weight_exploration(data)
 
+    # print("Moving on plot correlation")
+    # numerical_standard_data = get_numeric_features(data)
+    # plot_correlation_matrix(numerical_standard_data)
+    # plot_readmission_time_in_hospital(data)
+
+    X = data.drop('readmitted', axis=1)
+    print(f'Before numerical only {X.shape}')
+    non_numeric_cols = data.select_dtypes(exclude=['number']).columns
+    print(data['medical_specialty'].unique())
+    print("Non-numeric columns:")
+    print(non_numeric_cols)
+    """
+    Index(['race', 'gender', 'age', 'weight', 'payer_code', 'medical_specialty',
+       'diag_1', 'diag_2', 'diag_3', 'max_glu_serum', 'A1Cresult', 'metformin',
+       'repaglinide', 'nateglinide', 'chlorpropamide', 'glimepiride',
+       'acetohexamide', 'glipizide', 'glyburide', 'tolbutamide',
+       'pioglitazone', 'rosiglitazone', 'acarbose', 'miglitol', 'troglitazone',
+       'tolazamide', 'examide', 'citoglipton', 'insulin',
+       'glyburide-metformin', 'glipizide-metformin',
+       'glimepiride-pioglitazone', 'metformin-rosiglitazone',
+       'metformin-pioglitazone', 'change', 'diabetesMed'],
+    """
+    X = get_numeric_features(X)
+    print(f'After numerical only {X.shape}')
+
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y_readmitted, test_size=0.2, random_state=42, stratify=y_readmitted
+    )
+    
+    X_val, X_test, y_val, y_test = train_test_split(
+    X_val, y_val, test_size=0.5, random_state=42, stratify=y_val)
+
+    train_loader = create_dataloader(X_train, y_train, shuffle=True)
+    val_loader   = create_dataloader(X_val, y_val)
+    test_loader  = create_dataloader(X_test, y_test)
+
+    trained_model, dataloader, criterion = neural_network(X_train, y_train)
+
+    # Training
+    print_evals(trained_model, train_loader, criterion, "Training")
+    # Validation
+    print_evals(trained_model, val_loader, criterion, "Validation")
+    # Testing
+    print_evals(trained_model, test_loader, criterion, "Testing")
+
+
+
+    
 
 
 main()
