@@ -22,6 +22,7 @@ import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
 
 from medi_nn import MediNN
+from mediForest import mediForest
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -247,6 +248,11 @@ def train_and_evaluate(data, target, which_model:str):
         medi_nn.train()
         medi_nn.print_evals()
 
+    elif which_model == "tree":
+        medi_rf = mediForest(data, target)
+        medi_rf.train()
+        medi_rf.print_evals()
+
 def main():
     seed = 1234
     np.random.seed(seed)
@@ -257,7 +263,13 @@ def main():
     # numerical_standard_data = get_numeric_features(data)
     # plot_correlation_matrix(numerical_standard_data)
     # plot_readmission_time_in_hospital(data)
+    message = "Which Model?\n" \
+    "1. Neural Network (nn)\n" \
+    "2. Random Forest (tree)\n" \
+    "Please input nn or tree: "
 
-    train_and_evaluate(data, y_readmitted, "nn")
+    # model_choice = input(message).lower()
+    model_choice = "tree"
+    train_and_evaluate(data, y_readmitted, model_choice)
 
 main()
