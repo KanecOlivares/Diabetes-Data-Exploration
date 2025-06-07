@@ -82,7 +82,7 @@ class mediForest():
         print("Train classes:", np.bincount(self.y_train))
         print("Val classes:", np.bincount(self.y_val))
 
-        self.plot_depth_comparison("max_depth_scores")
+        self.plot_depth_comparison("max_depth_scores", 51)
 
         # Max Depth
         max_depths = [estimator.tree_.max_depth for estimator in self.model.estimators_]
@@ -104,9 +104,9 @@ class mediForest():
         
 
 
-    def plot_depth_comparison(self, filename):
-        tr_scores, val_scores, test_scores = self.compute_scores()
-        x = list(range(1, 21))
+    def plot_depth_comparison(self, filename, end_range):
+        tr_scores, val_scores, test_scores = self.compute_scores(end_range)
+        x = list(range(1, end_range))
         plt.figure(figsize=(10, 6))
         plt.plot(x, tr_scores, label='Training Accuracy', color='blue')
         plt.plot(x, val_scores, label='Validation Accuracy', color='orange')
@@ -120,7 +120,7 @@ class mediForest():
         save_fig(plt, "tree_figs", f"{filename}.png")
 
 
-    def compute_scores(self):
+    def compute_scores(self, end_range):
 
         training_score = []
         validation_score = []
@@ -131,12 +131,12 @@ class mediForest():
         # self.n_estimator_score(training_score, validation_score, testing_score)
 
         # Max Depth Scores
-        self.max_depth_score(training_score, validation_score, testing_score)
+        self.max_depth_score(end_range, training_score, validation_score, testing_score)
 
         return training_score, validation_score, testing_score
     
-    def n_estimator_score(self, training_score, validation_score, testing_score):
-        for i in range(1, 101):
+    def n_estimator_score(self, end_range, training_score, validation_score, testing_score):
+        for i in range(1, end_range):
             print(f"Finished with iteration: {i}")
             self.model = RandomForestClassifier(n_estimators=i, random_state=self.seed)
             self.train()
@@ -145,8 +145,8 @@ class mediForest():
             testing_score.append(self.get_score(self.X_test, self.y_test))
         
 
-    def max_depth_score(self, training_score, validation_score, testing_score):
-        for i in range(1, 21):
+    def max_depth_score(self, end_range, training_score, validation_score, testing_score):
+        for i in range(1, end_range):
             print(f"Finished with iteration: {i}")
             self.model = RandomForestClassifier(n_estimators=20, random_state=self.seed, max_depth=i)
             self.train()
