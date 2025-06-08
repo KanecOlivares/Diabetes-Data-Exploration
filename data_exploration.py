@@ -22,9 +22,8 @@ import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
 
 from medi_nn import MediNN
-from mediForest import MediKNN
-from mediForest import mediForest
-
+from medi_knn import MediKNN
+from medi_logistic import MediLogistic
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -266,14 +265,12 @@ def train_and_evaluate(data, target, which_model:str):
             test_errors.append(error[2])
 
         medi_knn.plot_loss_curve(k_vals, train_errors, val_errors, test_errors)
+    elif which_model == "logistic":
+        medi_logistic = MediLogistic(data, target)
+        medi_logistic.train()
+        medi_logistic.print_evals()
 
-
-
-
-    elif which_model == "tree":
-        medi_rf = mediForest(data, target)
-        medi_rf.train()
-        medi_rf.print_evals()
+        
 
 def main():
     seed = 1234
@@ -285,15 +282,7 @@ def main():
     # numerical_standard_data = get_numeric_features(data)
     # plot_correlation_matrix(numerical_standard_data)
     # plot_readmission_time_in_hospital(data)
-    train_and_evaluate(data, y_readmitted, "knn")
-    message = "Which Model?\n" \
-    "1. Neural Network (nn)\n" \
-    "2. Random Forest (tree)\n" \
-    "Please input nn or tree: "
 
-    # model_choice = input(message).lower()
-    model_choice = "tree"
-    train_and_evaluate(data, y_readmitted, model_choice)
-   
+    train_and_evaluate(data, y_readmitted, "logistic")
 
 main()
