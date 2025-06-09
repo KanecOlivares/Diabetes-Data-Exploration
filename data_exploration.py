@@ -266,6 +266,27 @@ def train_and_evaluate(data, target, which_model:str):
         medi_knn.plot_loss_curve(k_vals, train_errors, val_errors, test_errors)
 
 
+def train_on_data_subsets(data, target, which_model:str): 
+    """
+    This function is not implemented yet. It is a placeholder for future functionality.
+    """
+    sample_sizes = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    
+    if which_model == "knn":
+        test_errors = []
+        for sample_size in sample_sizes:
+            print(f"Training KNN on {sample_size*100}% of the data")
+            sample_data = data.sample(frac=sample_size, random_state=1234)
+            sample_target = target[sample_data.index]
+            medi_knn = MediKNN(sample_data, sample_target, k=5)
+            medi_knn.train()
+            error = medi_knn.return_evals()
+            test_errors.append(error[2])
+        
+        medi_knn.plot_sample_size_curve(sample_sizes, test_errors)
+
+    
+
 
 
 def main():

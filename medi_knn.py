@@ -99,9 +99,9 @@ class MediKNN():
 
     def return_evals(self) -> tuple:
         return_tuple = (
-        self.return_scores(self.model, self.X_train, self.y_train, "Training"),
-        self.return_scores(self.model, self.X_val, self.y_val, "Validation"),
-        self.return_scores(self.model, self.X_test, self.y_test, "Testing")
+        1 - self.return_scores(self.model, self.X_train, self.y_train, "Training"),
+        1 - self.return_scores(self.model, self.X_val, self.y_val, "Validation"),
+        1 - self.return_scores(self.model, self.X_test, self.y_test, "Testing")
         )
 
         # Printing Distrubutions
@@ -121,6 +121,15 @@ class MediKNN():
         axes.set_title('Error Rate vs K Value')
         axes.legend()
         save_fig(plt, "knn_figs", "knn_error_rate_vs_k_value.png")
+
+    def plot_sample_size_curve(self, sample_sizes, test_error) -> None:
+        figure, axes = plt.subplots(1, figsize=(6,6))
+        axes.plot(sample_sizes, test_error, color='blue', label='Test Error')
+        axes.set_xlabel('Sample Size')
+        axes.set_ylabel('Error Rate')
+        axes.set_title('Error Rate vs Sample Size')
+        axes.legend()
+        save_fig(plt, "knn_figs", "knn_error_rate_vs_sample_size.png")
 
 
     def return_scores(self, model, x, y, score_type: str = "NOT GIVEN") -> float:
