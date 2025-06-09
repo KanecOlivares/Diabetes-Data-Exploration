@@ -23,6 +23,8 @@ from torch.utils.data import TensorDataset, DataLoader
 
 from medi_nn import MediNN
 from medi_knn import MediKNN
+from mediForest import mediForest
+
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -268,11 +270,23 @@ def train_and_evaluate(data, target, which_model:str):
 
 def train_on_data_subsets(data, target, which_model:str): 
     """
-    This function is not implemented yet. It is a placeholder for future functionality.
+    Trains the model on different sample sizes of the data and plots the test errors.
     """
     sample_sizes = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    
-    if which_model == "knn":
+    if which_model == "nn":
+        test_errors = []
+        for sample_size in sample_sizes:
+            print(f"Training NN on {sample_size*100}% of the data")
+            sample_data = data.sample(frac=sample_size, random_state=1234)
+            sample_target = target[sample_data.index]
+            medi_nn = MediNN(sample_data, sample_target)
+            medi_nn.train()
+            error = medi_nn.return_evals()
+            test_errors.append(error[2])
+
+        medi_nn.plot_sample_size_curve(sample_sizes, test_errors)
+
+    elif which_model == "knn":
         test_errors = []
         for sample_size in sample_sizes:
             print(f"Training KNN on {sample_size*100}% of the data")
@@ -285,8 +299,18 @@ def train_on_data_subsets(data, target, which_model:str):
         
         medi_knn.plot_sample_size_curve(sample_sizes, test_errors)
 
-    
+    elif which_model == "tree":
+        test_errors = []
+        for sample_size in sample_sizes:
+            print(f"Training Random Forest on {sample_size*100}% of the data")
+            sample_data = data.sample(frac=sample_size, random_state=1234)
+            sample_target = target[sample_data.index]
+            medi_rf = mediForest(sample_data, sample_target)
+            medi_rf.train()
+            error = medi_rf.get_errors()
+            test_errors.append(error[2])    
 
+        medi_rf.plot_sample_size_curve(sample_sizes, test_errors)
 
 
 def main():
@@ -299,7 +323,17 @@ def main():
     # numerical_standard_data = get_numeric_features(data)
     # plot_correlation_matrix(numerical_standard_data)
     # plot_readmission_time_in_hospital(data)
+    
+    
+    # train_and_evaluate(data, y_readmitted, "knn")
+    # message = "Which Model?\n" \
+    # "1. Neural Network (nn)\n" \
+    # "2. Random Forest (tree)\n" \
+    # "Please input nn or tree: "
 
-    train_and_evaluate(data, y_readmitted, "knn")
+    # model_choice = input(message).lower()
+    model_choice = "knn"
+    train_and_evaluate(data, y_readmitted, model_choice)
+   
 
 main()

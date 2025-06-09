@@ -123,12 +123,12 @@ class MediKNN():
         save_fig(plt, "knn_figs", "knn_error_rate_vs_k_value.png")
 
     def plot_sample_size_curve(self, sample_sizes, test_error) -> None:
-        figure, axes = plt.subplots(1, figsize=(6,6))
-        axes.plot(sample_sizes, test_error, color='blue', label='Test Error')
-        axes.set_xlabel('Sample Size')
-        axes.set_ylabel('Error Rate')
-        axes.set_title('Error Rate vs Sample Size')
-        axes.legend()
+        plt.subplots(1, figsize=(6,6))
+        plt.plot(sample_sizes, test_error, color='blue')
+        plt.set_xlabel('Sample Size')
+        plt.set_ylabel('Test Error')
+        plt.set_title('Error Rate vs Sample Size')
+        plt.grid(True)
         save_fig(plt, "knn_figs", "knn_error_rate_vs_sample_size.png")
 
 

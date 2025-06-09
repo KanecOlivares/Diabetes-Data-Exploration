@@ -120,6 +120,20 @@ class MediNN():
         # Saves locally a grpah of the loss curve
         self.plot_loss_curve()
 
+    
+    def return_evals(self) -> tuple:
+        return_tuple = (
+        1 - self.return_scores(self.model, self.X_train, self.y_train, "Training"),
+        1 - self.return_scores(self.model, self.X_val, self.y_val, "Validation"),
+        1 - self.return_scores(self.model, self.X_test, self.y_test, "Testing")
+        )
+
+        # Printing Distrubutions
+        print("Train classes:", np.bincount(self.y_train))
+        print("Val classes:", np.bincount(self.y_val))
+
+        return return_tuple
+
     def plot_loss_curve(self) -> None:
         plt.plot(self.model.loss_curve_)
         plt.title("Loss per Iteration")
@@ -127,8 +141,23 @@ class MediNN():
         plt.ylabel("Loss")
         plt.grid(True)
         save_fig(plt, "nn_figs", "neural_network_loss_curve.png")
+    
+    def plot_sample_size_curve(self, sample_sizes, test_errors) -> None:
+        plt.figure(figsize=(6, 6))
+        plt.plot(sample_sizes, test_errors, color='blue')
+        plt.title("Sample Size vs Test Error")
+        plt.xlabel("Sample Size")
+        plt.ylabel("Test Error")
+        plt.grid(True)
+        save_fig(plt, "nn_figs", "sample_size_vs_test_error.png")
 
     def print_scores(self, model, x, y, score_type: str = "NOT GIVEN"):
         y_pred = model.predict(x)
         accuracy = accuracy_score(y, y_pred)
         print(f"{GREEN}{score_type} Accuracy: {accuracy:.4f}{RESET}")
+
+    def return_scores(self, model, x, y, score_type: str = "NOT GIVEN") -> float:
+        y_pred = model.predict(x)
+        accuracy = accuracy_score(y, y_pred)
+        print(f"{GREEN}{score_type} Accuracy: {accuracy:.4f}{RESET}")
+        return accuracy
